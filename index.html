@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HOLY SCREEN</title>
+  <style>
+    /* -- Base & Layout ------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        color: #111;
+        transition: background .3s, color .3s;
+        /* Set default font size if not overridden by localStorage */
+        font-size: var(--main-font-size, 16px);
+    }
+    body.dark-mode { background: #121212; color: #eee; }
+
+    /* Custom Properties for theming */
+    :root {
+        --accent-color: #ff3300; /* Default accent color */
+        --form-bg-color: #1a0000;
+        --form-border-color: #ff6600;
+        --form-input-bg: #300000;
+        --settings-bg-gradient-start: #0d0d0d;
+        --settings-bg-gradient-end: #330000;
+        --settings-border-shadow: #ff3300;
+        --settings-glow-shadow: #990000;
+        --section-title-color: #ff6600;
+        --text-color-light: #ffdddd;
+        --message-color: #ffeecc;
+    }
+    body.dark-mode {
+        --form-bg-color: #1a0000;
+        --form-border-color: var(--accent-color);
+        --form-input-bg: #300000;
+        --settings-bg-gradient-start: #0d0d0d;
+        --settings-bg-gradient-end: #330000;
+        --settings-border-shadow: var(--accent-color);
+        --settings-glow-shadow: #990000; /* Stays reddish for glow effect */
+        --section-title-color: var(--accent-color);
+        --text-color-light: #ffdddd;
+        --message-color: #ffeecc;
+    }
+
+    /* Sidebar & Menu */
+    .menu-toggle { position: fixed; top: 10px; left: 10px; font-size: 24px; cursor: pointer; z-index: 1001; }
+    .sidebar {
+      position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: #111; color: #fff;
+      padding-top: 60px; transition: .3s; z-index: 1000;
+    }
+    .sidebar.active { left: 0; }
+    .sidebar .close-btn { position: absolute; top: 12px; right: 12px; font-size: 28px; cursor: pointer; }
+    .sidebar ul { list-style: none; }
+    .sidebar li {
+      padding: 14px 24px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.2);
+    }
+    .sidebar li:hover { background: rgba(255,255,255,.1); }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; background: #333; color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px; z-index: 999;
+    }
+    #siteTitle { margin-left: 20px; color: var(--accent-color); font-weight: bold; }
+    .search-container input {
+      padding: 6px; width: 220px; border: 2px solid #ccc; border-radius: 6px;
+      animation: pulseBorder 2s infinite;
+    }
+    @keyframes pulseBorder {
+      0%   { box-shadow: 0 0 5px var(--accent-color), 0 0 10px white; }
+      50%  { box-shadow: 0 0 15px orange, 0 0 25px var(--accent-color); }
+      100% { box-shadow: 0 0 5px white, 0 0 10px orange; }
+    }
+
+    /* Container & Grid */
+    .container { padding: 20px; }
+    .section-title { font-size: 22px; margin: 20px 0 10px; font-weight: bold; }
+    .video-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;
+    }
+    .video-card {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 ratio */
+      height: 0;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,.1);
+    }
+
+    .video-card iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .video-card .video-title {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        padding: 5px;
+        font-size: 0.9em;
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .video-card:hover .video-title {
+        opacity: 1;
+    }
+
+    .video-card .action-menu {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        z-index: 10;
+    }
+
+    .action-menu button {
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 20px;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .action-menu button:hover {
+        background: rgba(0,0,0,0.8);
+    }
+    .action-list {
+      display: none; position: absolute; top: 36px; right: 0; background: #222; color: #fff;
+      border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .action-list.show { display: block; }
+    .action-list li {
+      padding: 8px 12px; cursor: pointer; white-space: nowrap;
+    }
+    .action-list li:hover { background: #333; }
+
+    /* Buttons */
+    .glow-button,
+    .settings-container button {
+      margin-top: 6px; padding: 6px 12px; border: none; background: var(--accent-color);
+      color: #fff; border-radius: 6px; cursor: pointer; transition: .3s;
+    }
+    .glow-button:hover,
+    .settings-container button:hover { background: #ff6600; }
+
+    /* To fix button styling, let's target the action-button specifically */
+    .action-menu .action-button {
+        margin-top: 0;
+        padding: 0;
+        background: rgba(0,0,0,0.5);
+        color: #fff;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        font-size: 20px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .action-menu .action-button:hover {
+        background: rgba(0,0,0,0.8);
+    }
+
+    /* Panels */
+    #signInPage, #signUpPage, #settingsPage {
+      display: none; min-height: 100vh; padding: 40px 20px;
+      background: radial-gradient(circle at top left, #220000, #000 80%);
+      color: #fff; position: relative; overflow-y: auto;
+      animation: fadeInPanel .6s ease;
+    }
+    @keyframes fadeInPanel {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Form & Settings */
+    .form-container {
+      max-width: 500px; margin: auto; background: var(--form-bg-color);
+      padding: 30px; border-radius: 12px; box-shadow: 0 0 20px var(--accent-color);
+      animation: pulseGlow 4s infinite ease-in-out;
+    }
+    @keyframes pulseGlow {
+      0%,100% { box-shadow: 0 0 12px var(--accent-color); }
+      50%     { box-shadow: 0 0 20px #ff6600; }
+    }
+    .form-container input {
+      width: 100%; padding: 12px; margin-bottom: 12px;
+      border-radius: 6px; border: 1px solid var(--form-border-color);
+      background: var(--form-input-bg); color: #fff; font-size: 16px; transition: .3s;
+    }
+    .form-container input:focus { outline: none; box-shadow: 0 0 10px #ff9900; }
+    .form-container a { display: block; margin-top: 12px; text-align: center; color: #ffcc99; }
+    .glow-button {
+      width: 100%; background: linear-gradient(to right,var(--accent-color),#ff6600);
+      color: #fff; padding: 12px; border-radius: 8px; font-size: 16px;
+      box-shadow: 0 0 10px var(--accent-color); transition: .3s; display: block;
+    }
+    .social-signin-button {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: background-color 0.3s ease;
+    }
+    .google-signin-button {
+        background-color: #4285F4;
+        color: white;
+    }
+    .google-signin-button:hover {
+        background-color: #357ae8;
+    }
+    .phone-signin-button {
+        background-color: #25D366; /* WhatsApp green */
+        color: white;
+    }
+    .phone-signin-button:hover {
+        background-color: #1DA851;
+    }
+    .anonymous-signin-button {
+        background-color: #555;
+        color: white;
+    }
+    .anonymous-signin-button:hover {
+        background-color: #333;
+    }
+    #recaptcha-container {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+    }
+
+
+    .settings-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+      background: linear-gradient(to bottom right,var(--settings-bg-gradient-start),var(--settings-bg-gradient-end));
+      padding: 40px; border-radius: 12px; max-width: 800px; margin: auto;
+      box-shadow: 0 0 15px var(--settings-border-shadow),0 0 25px var(--settings-glow-shadow);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .settings-container h2 {
+      grid-column: span 2; border-bottom: 1px solid rgba(255,255,255,.2);
+      padding-bottom: 6px; margin-bottom: 10px; color: var(--section-title-color);
+    }
+    .settings-container label { font-weight: bold; margin-bottom: 6px; display: block; color: var(--text-color-light); }
+    .settings-container input[type="text"],
+    .settings-container input[type="email"],
+    .settings-container input[type="password"],
+    .settings-container input[type="number"],
+    .settings-container input[type="time"],
+    .settings-container select {
+      width: 90%; padding: 10px; border-radius: 8px; border: 1px solid var(--form-border-color);
+      background: var(--form-input-bg); color: #fff; transition: .3s;
+    }
+    .settings-container input:focus,
+    .settings-container select:focus {
+      outline: none; border: 2px solid var(--form-border-color); box-shadow: 0 0 10px var(--accent-color);
+    }
+    .settings-container input[type="checkbox"] {
+      margin-right: 10px; /* Space between checkbox and label */
+    }
+    #qualityMsg, #generalSettingsMsg, #reminderMessage {
+      grid-column: span 2; margin-top: 10px; font-weight: bold; color: var(--message-color);
+    }
+
+    /* Smaller Profile Photo */
+    #userPhoto {
+        width: 60px; /* Smaller width */
+        height: 60px; /* Smaller height */
+        object-fit: cover; /* Ensures image covers the area without distortion */
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--accent-color); /* Slightly smaller glow */
+        margin-bottom: 10px;
+    }
+
+    /* Footer */
+    footer { background: #222; color: #fff; text-align: center; padding: 20px; margin-top: 20px; }
+
+    @media (max-width: 600px) {
+      .video-grid, .settings-container { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body onload="initPage()">
+
+  <div class="menu-toggle" id="menuToggle">=</div>
+  <nav class="sidebar" id="sidebar">
+    <div class="close-btn" id="closeSidebar">×</div>
+    <ul>
+      <li onclick="showLibrary()">Library</li>
+      <li onclick="openSignInPage()">Sign In</li>
+      <li onclick="openSignUpPage()">Sign Up</li>
+      <li onclick="openSettings()">Settings</li>
+      <li onclick="toggleMode()">Theme</li>
+      <li onclick="signOut()">Sign Out</li>
+    </ul>
+  </nav>
+
+  <header>
+    <div id="siteTitle">HOLY SCREEN</div>
+    <div class="search-container">
+      <input id="searchInput" placeholder="Search videos..." onkeyup="searchVideos()" />
+    </div>
+    <a id="profileBtn" href="javascript:void(0)" onclick="openSettings()" style="visibility: hidden; pointer-events: none;"></a>
+  </header>
+<main class="container" id="library">
+  <div class="section-title">HOLY SCREEN Movie Library</div>
+  <div class="video-grid">
+  
+    <div class="video-card" onclick="logWatched('JESUS – Tshivenda')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/LJLxjhQIXNU?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Tshivenda</div> 
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Tshivenda')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Tshivenda')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Tshivenda','https://youtu.be/LJLxjhQIXNU')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Sepedi')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/Jh921zkJpfc?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Sepedi</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Sepedi')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Sepedi')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Sepedi','https://youtu.be/Jh921zkJpfc')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Tsonga')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/-5LRQbzzDuc?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Tsonga</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Tsonga')">? Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Tsonga')">?? Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Tsonga','https://youtu.be/-5LRQbzzDuc')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Zulu')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/9jE6KFiQouY?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Zulu</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Zulu')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Zulu')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Zulu','https://youtu.be/9jE6KFiQouY')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Xhosa')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/zd7yaTYKgQ4?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Xhosa</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Xhosa')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Xhosa')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Xhosa','https://youtu.be/zd7yaTYKgQ4')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Afrikaans')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/pmlr5qgEXQg?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Afrikaans</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Afrikaans')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Afrikaans')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Afrikaans','https://youtu.be/pmlr5qgEXQg')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Setswana')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/uc39r9o87jo?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Setswana</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Setswana')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Setswana')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Setswana','https://youtu.be/uc39r9o87jo')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('JESUS – Sesotho')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/2YibcWSHww4?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">JESUS – Sesotho</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('JESUS – Sesotho')">Add to Playlist</li>
+          <li onclick="addToFavorites('JESUS – Sesotho')">Favorite</li>
+          <li onclick="shareToWhatsApp('JESUS – Sesotho','https://youtu.be/2YibcWSHww4')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Gospel of John')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/-k0D_qFPb4o?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Gospel of John</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Gospel of John')">Add to Playlist</li>
+          <li onclick="addToFavorites('Gospel of John')">Favorite</li>
+          <li onclick="shareToWhatsApp('Gospel of John','https://youtu.be/-k0D_qFPb4o')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Gospel of Matthew')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/2ErTneBIJJs?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Gospel of Matthew</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Gospel of Matthew')">Add to Playlist</li>
+          <li onclick="addToFavorites('Gospel of Matthew')">Favorite</li>
+          <li onclick="shareToWhatsApp('Gospel of Matthew','https://youtu.be/2ErTneBIJJs')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))"> Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Gospel of Mark')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/rh9yjReuWH0?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Gospel of Mark</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Gospel of Mark')">Add to Playlist</li>
+          <li onclick="addToFavorites('Gospel of Mark')">Favorite</li>
+          <li onclick="shareToWhatsApp('Gospel of Mark','https://youtu.be/rh9yjReuWH0')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Gospel of Luke')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/klzda4dYqio?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Gospel of Luke</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Gospel of Luke')">Add to Playlist</li>
+          <li onclick="addToFavorites('Gospel of Luke')">Favorite</li>
+          <li onclick="shareToWhatsApp('Gospel of Luke','https://youtu.be/klzda4dYqio')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Magdalena – A Jesus Story')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/BXWH0PNccbk?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Magdalena – A Jesus Story</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Magdalena – A Jesus Story')">Add to Playlist</li>
+          <li onclick="addToFavorites('Magdalena – A Jesus Story')">Favorite</li>
+          <li onclick="shareToWhatsApp('Magdalena – A Jesus Story','https://youtu.be/BXWH0PNccbk')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Moses (1995)')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/KX83ed0Tg6g?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Moses (1995)</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Moses (1995)')">Add to Playlist</li>
+          <li onclick="addToFavorites('Moses (1995)')">Favorite</li>
+          <li onclick="shareToWhatsApp('Moses (1995)','https://youtu.be/KX83ed0Tg6g')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Moses and Exodus')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/RnmBUpofgpY?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Moses and Exodus</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Moses and Exodus')">Add to Playlist</li>
+          <li onclick="addToFavorites('Moses and Exodus')">Favorite</li>
+          <li onclick="shareToWhatsApp('Moses and Exodus','https://youtu.be/RnmBUpofgpY')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Abraham and Sarah – Great People of the Bible')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/_f_jJ2sG24A?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Abraham and Sarah – Great People of the Bible</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Abraham and Sarah – Great People of the Bible')">Add to Playlist</li>
+          <li onclick="addToFavorites('Abraham and Sarah – Great People of the Bible')">Favorite</li>
+          <li onclick="shareToWhatsApp('Abraham and Sarah – Great People of the Bible','https://youtu.be/_f_jJ2sG24A')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Genesis – Abraham (KJV)')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/JZoQZw22nGo?rel=0&start=587"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Genesis – Abraham (KJV)</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Genesis – Abraham (KJV)')">Add to Playlist</li>
+          <li onclick="addToFavorites('Genesis – Abraham (KJV)')">Favorite</li>
+          <li onclick="shareToWhatsApp('Genesis – Abraham (KJV)','https://youtu.be/JZoQZw22nGo?start=587')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Book of Genesis')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/JMde2CS7NFc?rel=0&start=587"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Book of Genesis</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Book of Genesis')">Add to Playlist</li>
+          <li onclick="addToFavorites('Book of Genesis')">Favorite</li>
+          <li onclick="shareToWhatsApp('Book of Genesis','https://youtu.be/JMde2CS7NFc?start=587')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="video-card" onclick="logWatched('Story of Ruth')">
+      <iframe data-quality
+              src="https://www.youtube.com/embed/kW5WyJ1QNpM?rel=0"
+              allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <div class="video-title">Story of Ruth</div>
+      <div class="action-menu">
+        <button class="action-button" onclick="toggleMenu(this); event.stopPropagation()"></button>
+        <ul class="action-list">
+          <li onclick="addToPlaylist('Story of Ruth')">Add to Playlist</li>
+          <li onclick="addToFavorites('Story of Ruth')">Favorite</li>
+          <li onclick="shareToWhatsApp('Story of Ruth','https://youtu.be/kW5WyJ1QNpM')">Share</li>
+          <li onclick="toggleFullScreen(this.closest('.video-card'))">Fullscreen</li>
+        </ul>
+      </div>
+    </div>
+ 
+  </div>
+</main>
+
+  <section id="signInPage">
+    <div class="form-container">
+      <h1>Sign In to HOLY SCREEN</h1>
+      <label for="signInEmail">Email</label>
+      <input id="signInEmail" type="email" placeholder="Email" required />
+      <label for="signInPassword">Password</label>
+      <input id="signInPassword" type="password" placeholder="Password" required />
+      <button class="glow-button" onclick="submitSignIn()">Sign In with Email</button>
+      <p style="text-align:center; margin: 15px 0;">-- OR --</p>
+
+      <button class="social-signin-button google-signin-button" onclick="signInWithGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" style="width: 20px; height: 20px; margin-right: 8px;">
+        Sign in with Google
+      </button>
+
+      <label for="phoneNumber">Phone Number</label>
+      <input id="phoneNumber" type="tel" placeholder="+27 12 345 6789" />
+      <button class="social-signin-button phone-signin-button" onclick="sendVerificationCode()">Send Code</button>
+      
+      <div id="recaptcha-container"></div>
+      
+      <label for="verificationCode">Verification Code</label>
+      <input id="verificationCode" type="text" placeholder="Enter verification code" />
+      <button class="glow-button" onclick="verifyPhoneNumber()">Verify Code</button>
+
+      <button class="social-signin-button anonymous-signin-button" onclick="signInAnonymously()">Sign in Anonymously</button>
+
+      <p><a href="javascript:void(0)" onclick="openSignUpPage()">Need an account? Sign Up</a></p>
+      <button class="glow-button" onclick="goHome()">Back to Library</button>
+      <div id="signInMessage"></div>
+    </div>
+  </section>
+
+  <section id="signUpPage">
+    <div class="form-container">
+      <h1>Create HOLY SCREEN Account</h1>
+      <label for="signUpEmail">Email</label>
+      <input id="signUpEmail" type="email" placeholder="Email" required />
+      <label for="signUpPassword">Password</label>
+      <input id="signUpPassword" type="password" placeholder="Password (min 6 chars)" required />
+      <label for="signUpConfirm">Confirm Password</label>
+      <input id="signUpConfirm" type="password" placeholder="Confirm Password" required />
+      <button class="glow-button" onclick="submitSignUp()">Sign Up</button>
+      <p><a href="javascript:void(0)" onclick="openSignInPage()">Already have an account? Sign In</a></p>
+      <button class="glow-button" onclick="goHome()">Back to Library</button>
+      <div id="signUpMessage"></div>
+    </div>
+  </section>
+
+  <section id="settingsPage">
+    <h1>My Settings</h1>
+    <div class="settings-container">
+      <h2>Profile Management</h2>
+      <div style="grid-column:span 2; text-align:center;">
+        <img id="userPhoto" src="https://via.placeholder.com/80"
+             style="border-radius:50%; box-shadow:0 0 12px var(--accent-color);" />
+        <p>Welcome, <strong id="profileNameDisplay">Guest</strong></p>
+        <p>Status: <strong id="profileStatus">Guest</strong></p>
+        <button onclick="editProfileName()">Edit Name</button>
+      </div>
+
+      <label for="profilePhotoInput">Change Profile Photo</label>
+      <input type="file" id="profilePhotoInput" accept="image/*" onchange="saveProfilePhoto(this)" />
+
+      <h2>Watch History</h2>
+      <ul id="historyList" style="list-style:none; padding:0; grid-column:span 2;">
+        <li>No history yet</li>
+      </ul>
+      <button onclick="clearHistory()" style="grid-column:span 2;">Clear History</button>
+
+      <h2>My Playlists</h2>
+      <label for="playlistName">Name Your Playlist</label>
+      <input id="playlistName" placeholder="E.g. Bible Heroes" />
+      <button onclick="createPlaylist()">Create Playlist</button>
+      <div id="playlistsView" style="grid-column:span 2;"></div>
+      <button onclick="managePlaylists()" style="grid-column:span 2;">Manage Playlists</button>
+
+      <h2>Reminders</h2>
+      <label for="breakMinutes">Break Reminder (minutes)</label>
+      <input id="breakMinutes" type="number" min="1" placeholder="30" />
+      <button onclick="startBreakReminder()">Start Timer</button>
+      <span><label for="bedtimeInput">Bedtime Reminder</label></span>
+      <input id="bedtimeInput" type="time" />
+      <button onclick="setBedtimeReminder()">Set Bedtime</button>
+      <div id="reminderMessage" style="grid-column: span 2; color: var(--message-color);"></div>
+
+
+      <h2>Language & Video Quality</h2>
+      <label for="languageInput">Preferred Language</label>
+      <input id="languageInput" placeholder="English, Zulu..." />
+      <button onclick="setGlobalLanguage()">Save Language</button>
+      <label for="qualitySelect">Video Quality</label>
+      <select id="qualitySelect">
+        <option value="default">Auto / Default</option>
+        <option value="hd">HD (720p)</option>
+        <option value="fullhd">Full HD (1080p)</option>
+        <option value="low">Low (360p)</option>
+      </select>
+      <button onclick="saveQuality()">Save Quality</button>
+      <div id="qualityMsg"></div>
+
+      <h2>Notifications</h2>
+      <label style="grid-column:span 2;">
+        <input type="checkbox" id="emailNotifications" /> Receive email notifications
+      </label>
+      <label style="grid-column:span 2;">
+        <input type="checkbox" id="pushNotifications" /> Receive push notifications
+      </label>
+      <button onclick="saveNotifications()">Save Notification Settings</button>
+
+      <h2>Privacy</h2>
+      <label style="grid-column:span 2;">
+        <input type="checkbox" id="dataSharing" /> Share anonymous usage data
+      </label>
+      <label style="grid-column:span 2;">
+        <input type="checkbox" id="personalizedContent" /> Personalized content recommendations
+      </label>
+      <button onclick="savePrivacySettings()">Save Privacy Settings</button>
+
+      <h2>Display</h2>
+      <label for="fontSize">Font Size</label>
+      <select id="fontSize">
+        <option value="small">Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+      </select>
+      <button onclick="setFontSize()">Apply</button>
+      <label for="accentColor">Accent Color</label>
+      <input type="color" id="accentColor" value="#ff3300">
+      <button onclick="setAccentColor()">Apply</button>
+
+      <h2>Accessibility</h2>
+      <label style="grid-column:span 2;">
+        <input type="checkbox" id="closedCaptions" /> Enable Closed Captions (CC)
+      </label>
+      <label for="captionSize">Caption Text Size</label>
+      <select id="captionSize">
+        <option value="small">Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+      </select>
+      <button onclick="saveAccessibility()">Save Accessibility</button>
+
+      <h2>Account Management</h2>
+      <label for="currentPassword">Current Password</label>
+      <input type="password" id="currentPassword" placeholder="Current Password">
+      <label for="newPassword">New Password</label>
+      <input type="password" id="newPassword" placeholder="New Password">
+      <button onclick="changePassword()">Change Password</button>
+      <button class="glow-button" onclick="deleteAccount()" style="grid-column:span 2; background:#cc0000;">Delete Account</button>
+
+      <h2>Advanced</h2>
+      <button onclick="clearCache()">Clear Cache</button>
+      <button onclick="resetAllSettings()">Reset All Settings</button>
+      <button class="glow-button" onclick="goHome()" style="grid-column:span 2;">Back to Library</button>
+      <div id="generalSettingsMsg"></div>
+    </div>
+  </section>
+
+  <footer>
+    © 2025 HOLY SCREEN
+    <div class="social-links" style="margin-top: 20px;">
+      <p>Follow Us On:</p>
+      <a href="https://www.facebook.com/share/166PoxSiwn/" target="_blank" style="color: #fff; text-decoration: none; margin: 0 10px; font-weight: bold;">Facebook</a>
+      <a href="https://www.instagram.com/holyscreen69?igsh=MTUzbXR6MHR5Nzgydw==" target="_blank" style="color: #fff; text-decoration: none; margin: 0 10px; font-weight: bold;">Instagram</a>
+      <a href="https://vm.tiktok.com/ZSSYwh2kP/" target="_blank" style="color: #fff; text-decoration: none; margin: 0 10px; font-weight: bold;">TikTok</a>
+    </div>
+  </footer>
+
+  <script type="module">
+    // Firebase SDK Imports (using v10.11.0 as a stable version)
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+    import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js'; // Optional, but good for tracking
+    import { 
+      getAuth, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      onAuthStateChanged, 
+      signOut,
+      GoogleAuthProvider, // Added for Google Sign-In
+      signInWithPopup,    // Added for Google Sign-In
+      PhoneAuthProvider,  // Added for Phone Sign-In
+      signInWithPhoneNumber, // Added for Phone Sign-In
+      RecaptchaVerifier,  // Added for Phone Sign-In (reCAPTCHA)
+      signInAnonymously   // Added for Anonymous Sign-In
+    } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js';
+
+    // YOUR FIREBASE CONFIG GOES HERE
+    // Replace this with your actual Firebase project configuration from the Firebase Console
+    const firebaseConfig = {
+      apiKey: "AIzaSyDaiir1Mev5uquTvWmTwoC6VYvn0Gd_LmM", // Your actual API Key
+      authDomain: "holy-screen-auth.firebaseapp.com", // Your actual Auth Domain
+      projectId: "holy-screen-auth", // Your actual Project ID
+      storageBucket: "holy-screen-auth.firebasestorage.app", // Your actual Storage Bucket
+      messagingSenderId: "196821482243", // Your actual Messaging Sender ID
+      appId: "1:196821482243:web:0b9f3c2cb8397ebac64736", // Your actual App ID
+      measurementId: "G-E9NFY5D1TJ" // Your actual Measurement ID (if using Analytics)
+    };
+
+    // Initialize Firebase and get service instances
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app); // Initialize analytics
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Global variable to hold the current logged-in user
+    let currentUser = null;
+    let confirmationResult = null; // To store the result of phone verification
+
+    // --- UI State Management (Reflects Auth State) ---
+    function updateUIForAuthState(user) {
+      const profileBtn = document.getElementById('profileBtn');
+      const profileNameDisplay = document.getElementById('profileNameDisplay');
+      const profileStatus = document.getElementById('profileStatus');
+      const userPhoto = document.getElementById('userPhoto');
+
+      // Sidebar menu items (adjust selectors if your HTML structure is different)
+      const signInMenuItem = document.querySelector('.sidebar li:nth-child(2)'); // Assumes "Sign In" is 2nd li
+      const signUpMenuItem = document.querySelector('.sidebar li:nth-child(3)'); // Assumes "Sign Up" is 3rd li
+      const signOutMenuItem = document.querySelector('.sidebar li:nth-child(6)'); // Assumes "Sign Out" is 6th li
+
+      if (user) {
+        currentUser = user;
+        profileBtn.style.visibility = 'visible'; // Keep button space, just change visibility
+        profileBtn.style.pointerEvents = 'auto'; // Make it clickable
+        profileNameDisplay.textContent = user.displayName || user.email || 'User';
+        profileStatus.textContent = 'Signed In';
+        userPhoto.src = user.photoURL || 'https://via.placeholder.com/80'; // Default photo if none
+
+        // Hide Sign In/Sign Up, show Sign Out
+        if (signInMenuItem) signInMenuItem.style.display = 'none';
+        if (signUpMenuItem) signUpMenuItem.style.display = 'none';
+        if (signOutMenuItem) signOutMenuItem.style.display = 'list-item';
+
+        // Load user-specific data from Firestore
+        loadUserDataToSettingsPage(user.uid);
+      } else {
+        currentUser = null;
+        profileBtn.style.visibility = 'hidden'; // Keep button space, just change visibility
+        profileBtn.style.pointerEvents = 'none'; // Make it unclickable
+        profileNameDisplay.textContent = 'Guest';
+        profileStatus.textContent = 'Guest';
+        userPhoto.src = 'https://via.placeholder.com/80'; // Reset to default photo
+
+        // Show Sign In/Sign Up, hide Sign Out
+        if (signInMenuItem) signInMenuItem.style.display = 'list-item';
+        if (signUpMenuItem) signUpMenuItem.style.display = 'list-item';
+        if (signOutMenuItem) signOutMenuItem.style.display = 'none';
+
+        // Clear any user-specific data displayed on settings page
+        clearSettingsPageUI();
+      }
+    }
+
+    // Function to load user data from Firestore and populate settings page
+    async function loadUserDataToSettingsPage(uid) {
+      const userDocRef = doc(db, "users", uid);
+      try {
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          // Populate settings fields
+          document.getElementById('languageInput').value = userData.language || '';
+          document.getElementById('qualitySelect').value = userData.quality || 'default';
+          document.getElementById('emailNotifications').checked = userData.emailNotifications || false;
+          document.getElementById('pushNotifications').checked = userData.pushNotifications || false;
+          document.getElementById('dataSharing').checked = userData.dataSharing || false;
+          document.getElementById('personalizedContent').checked = userData.personalizedContent || false;
+          document.getElementById('fontSize').value = userData.fontSize || 'medium';
+          document.getElementById('accentColor').value = userData.accentColor || '#ff3300';
+          document.getElementById('closedCaptions').checked = userData.closedCaptions || false;
+          document.getElementById('captionSize').value = userData.captionSize || 'medium';
+
+          // Update profile name display if available from Firestore (more persistent)
+          if (userData.displayName) {
+              document.getElementById('profileNameDisplay').textContent = userData.displayName;
+          }
+          if (userData.photoURL) {
+              document.getElementById('userPhoto').src = userData.photoURL;
+          }
+
+          // Populate watch history
+          const historyList = document.getElementById('historyList');
+          historyList.innerHTML = ''; // Clear existing
+          if (userData.watchHistory && userData.watchHistory.length > 0) {
+            userData.watchHistory.forEach(item => {
+              const li = document.createElement('li');
+              li.textContent = item;
+              historyList.appendChild(li);
+            });
+          } else {
+            const li = document.createElement('li');
+            li.textContent = 'No history yet';
+            historyList.appendChild(li);
+          }
+
+          // Populate playlists
+          const playlistsView = document.getElementById('playlistsView');
+          playlistsView.innerHTML = '';
+          if (userData.playlists && Object.keys(userData.playlists).length > 0) {
+              for (const playlistName in userData.playlists) {
+                  const playlistDiv = document.createElement('div');
+                  playlistDiv.innerHTML = `<h3>${playlistName}</h3><ul style="list-style:none; padding:0;"></ul>`;
+                  const ul = playlistDiv.querySelector('ul');
+                  userData.playlists[playlistName].forEach(videoTitle => {
+                      const li = document.createElement('li');
+                      li.textContent = videoTitle;
+                      ul.appendChild(li);
+                  });
+                  playlistsView.appendChild(playlistDiv);
+              }
+          } else {
+              playlistsView.textContent = 'No playlists created yet.';
+          }
+
+
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      }
+    }
+
+    // Function to clear user-specific data displayed on settings page
+    function clearSettingsPageUI() {
+      document.getElementById('languageInput').value = '';
+      document.getElementById('qualitySelect').value = 'default';
+      document.getElementById('emailNotifications').checked = false;
+      document.getElementById('pushNotifications').checked = false;
+      document.getElementById('dataSharing').checked = false;
+      document.getElementById('personalizedContent').checked = false;
+      document.getElementById('fontSize').value = 'medium';
+      document.getElementById('accentColor').value = '#ff3300';
+      document.getElementById('closedCaptions').checked = false;
+      document.getElementById('captionSize').value = 'medium';
+
+      const historyList = document.getElementById('historyList');
+      historyList.innerHTML = '<li>No history yet</li>';
+
+      const playlistsView = document.getElementById('playlistsView');
+      playlistsView.innerHTML = '';
+    }
+
+    // Listen for authentication state changes
+    onAuthStateChanged(auth, (user) => {
+      updateUIForAuthState(user);
+    });
+
+    // --- Authentication Functions (Email/Password) ---
+    async function submitSignIn() {
+      const email = document.getElementById('signInEmail').value;
+      const password = document.getElementById('signInPassword').value;
+      const signInMessage = document.getElementById('signInMessage');
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        signInMessage.textContent = 'Signed in successfully!';
+        signInMessage.style.color = 'green';
+        goHome(); // Redirect to library on successful sign-in
+      } catch (error) {
+        signInMessage.textContent = `Sign in failed: ${error.message}`;
+        signInMessage.style.color = 'red';
+        console.error("Sign In Error:", error);
+      }
+    }
+
+    async function submitSignUp() {
+      const email = document.getElementById('signUpEmail').value;
+      const password = document.getElementById('signUpPassword').value;
+      const confirmPassword = document.getElementById('signUpConfirm').value;
+      const signUpMessage = document.getElementById('signUpMessage');
+
+      if (password !== confirmPassword) {
+        signUpMessage.textContent = 'Passwords do not match.';
+        signUpMessage.style.color = 'red';
+        return;
+      }
+      if (password.length < 6) {
+        signUpMessage.textContent = 'Password must be at least 6 characters long.';
+        signUpMessage.style.color = 'red';
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create a user document in Firestore
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          email: userCredential.user.email,
+          createdAt: new Date(),
+          // Initialize other user settings here if needed
+          watchHistory: [],
+          playlists: {}
+        });
+        signUpMessage.textContent = 'Account created successfully! You are now signed in.';
+        signUpMessage.style.color = 'green';
+        goHome(); // Redirect to library on successful sign-up
+      } catch (error) {
+        signUpMessage.textContent = `Sign up failed: ${error.message}`;
+        signUpMessage.style.color = 'red';
+        console.error("Sign Up Error:", error);
+      }
+    }
+
+    // Expose signOut to global scope
+    window.signOut = async function() {
+      try {
+        await auth.signOut();
+        alert('You have been signed out.');
+        // UI will be updated by onAuthStateChanged listener
+      } catch (error) {
+        console.error("Sign Out Error:", error);
+        alert(`Error signing out: ${error.message}`);
+      }
+    };
+
+    // --- New Authentication Functions ---
+
+    // Google Sign-In
+    window.signInWithGoogle = async function() {
+      const provider = new GoogleAuthProvider();
+      const signInMessage = document.getElementById('signInMessage');
+      try {
+        const result = await signInWithPopup(auth, provider);
+        // The signed-in user info.
+        const user = result.user;
+        // Check if user document exists in Firestore, create if not
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                createdAt: new Date(),
+                watchHistory: [],
+                playlists: {}
+            });
+        }
+        signInMessage.textContent = 'Signed in with Google successfully!';
+        signInMessage.style.color = 'green';
+        goHome();
+      } catch (error) {
+        signInMessage.textContent = `Google Sign-in failed: ${error.message}`;
+        signInMessage.style.color = 'red';
+        console.error("Google Sign-in Error:", error);
+      }
+    };
+
+    // Phone Sign-In
+    // Initialize reCAPTCHA verifier
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'normal', // or 'invisible'
+        'callback': (response) => {
+            // reCAPTCHA solved, allow signInWithPhoneNumber.
+            console.log('reCAPTCHA solved!');
+        },
+        'expired-callback': () => {
+            // Response expired. Ask user to solve reCAPTCHA again.
+            alert('reCAPTCHA expired. Please verify again.');
+            document.getElementById('signInMessage').textContent = 'reCAPTCHA expired. Please try again.';
+            document.getElementById('signInMessage').style.color = 'red';
+        }
+    });
+    recaptchaVerifier.render(); // Render the reCAPTCHA widget
+
+    window.sendVerificationCode = async function() {
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const signInMessage = document.getElementById('signInMessage');
+        try {
+            // Ensure reCAPTCHA is rendered before sending code
+            if (!window.recaptchaVerifier) {
+                signInMessage.textContent = 'reCAPTCHA not initialized. Please refresh the page.';
+                signInMessage.style.color = 'red';
+                return;
+            }
+            confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+            signInMessage.textContent = 'Verification code sent to your phone!';
+            signInMessage.style.color = 'green';
+            // You might want to hide phone input and show code input here
+        } catch (error) {
+            signInMessage.textContent = `Failed to send code: ${error.message}`;
+            signInMessage.style.color = 'red';
+            console.error("Send Code Error:", error);
+        }
+    };
+
+    window.verifyPhoneNumber = async function() {
+        const verificationCode = document.getElementById('verificationCode').value;
+        const signInMessage = document.getElementById('signInMessage');
+        try {
+            if (!confirmationResult) {
+                signInMessage.textContent = 'Please send a verification code first.';
+                signInMessage.style.color = 'red';
+                return;
+            }
+            const result = await confirmationResult.confirm(verificationCode);
+            // User signed in successfully.
+            const user = result.user;
+            // Check if user document exists in Firestore, create if not
+            const userDocRef = doc(db, "users", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) {
+                await setDoc(userDocRef, {
+                    phoneNumber: user.phoneNumber,
+                    createdAt: new Date(),
+                    watchHistory: [],
+                    playlists: {}
+                });
+            }
+            signInMessage.textContent = 'Phone number verified and signed in!';
+            signInMessage.style.color = 'green';
+            goHome();
+        } catch (error) {
+            signInMessage.textContent = `Failed to verify code: ${error.message}`;
+            signInMessage.style.color = 'red';
+            console.error("Verify Code Error:", error);
+        }
+    };
+
+    // Anonymous Sign-In
+    window.signInAnonymously = async function() {
+        const signInMessage = document.getElementById('signInMessage');
+        try {
+            const userCredential = await signInAnonymously(auth);
+            const user = userCredential.user;
+            // Check if user document exists in Firestore, create if not
+            const userDocRef = doc(db, "users", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) {
+                await setDoc(userDocRef, {
+                    isAnonymous: true,
+                    createdAt: new Date(),
+                    watchHistory: [],
+                    playlists: {}
+                });
+            }
+            signInMessage.textContent = 'Signed in anonymously!';
+            signInMessage.style.color = 'green';
+            goHome();
+        } catch (error) {
+            signInMessage.textContent = `Anonymous sign-in failed: ${error.message}`;
+            signInMessage.style.color = 'red';
+            console.error("Anonymous Sign-in Error:", error);
+        }
+    };
+
+    // --- General UI Functions ---
+    window.initPage = function() {
+      // Any initialization logic can go here. onAuthStateChanged handles auth UI updates.
+      showLibrary(); // Default view
+    };
+
+    window.openSignInPage = function() {
+      document.getElementById('library').style.display = 'none';
+      document.getElementById('signUpPage').style.display = 'none';
+      document.getElementById('settingsPage').style.display = 'none';
+      document.getElementById('signInPage').style.display = 'block';
+    };
+
+    window.openSignUpPage = function() {
+      document.getElementById('library').style.display = 'none';
+      document.getElementById('signInPage').style.display = 'none';
+      document.getElementById('settingsPage').style.display = 'none';
+      document.getElementById('signUpPage').style.display = 'block';
+    };
+
+    window.openSettings = function() {
+      document.getElementById('library').style.display = 'none';
+      document.getElementById('signInPage').style.display = 'none';
+      document.getElementById('signUpPage').style.display = 'none';
+      document.getElementById('settingsPage').style.display = 'block';
+    };
+
+    window.goHome = function() {
+      document.getElementById('signInPage').style.display = 'none';
+      document.getElementById('signUpPage').style.display = 'none';
+      document.getElementById('settingsPage').style.display = 'none';
+      document.getElementById('library').style.display = 'block';
+    };
+
+    window.showLibrary = function() {
+      document.getElementById('signInPage').style.display = 'none';
+      document.getElementById('signUpPage').style.display = 'none';
+      document.getElementById('settingsPage').style.display = 'none';
+      document.getElementById('library').style.display = 'block';
+    };
+
+    // Toggle Sidebar Menu
+    document.getElementById('menuToggle').onclick = function() {
+      document.getElementById('sidebar').classList.add('active');
+    };
+    document.getElementById('closeSidebar').onclick = function() {
+      document.getElementById('sidebar').classList.remove('active');
+    };
+
+    // --- Video Search Functionality ---
+    window.searchVideos = function() {
+      const searchInput = document.getElementById('searchInput').value.toLowerCase();
+      const videoCards = document.querySelectorAll('.video-card');
+      videoCards.forEach(card => {
+        const title = card.querySelector('.video-title').textContent.toLowerCase();
+        if (title.includes(searchInput)) {
+          card.style.display = ''; // Show
+        } else {
+          card.style.display = 'none'; // Hide
+        }
+      });
+    };
+
+    // --- Local Storage & Settings Functions ---
+    window.toggleMode = function() {
+      document.body.classList.toggle('dark-mode');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', isDarkMode);
+    };
+
+    // Apply saved mode on load
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark-mode');
+    }
+
+    // Function to set global language (placeholder for now)
+    window.setGlobalLanguage = function() {
+      const language = document.getElementById('languageInput').value;
+      alert(`Language set to: ${language}`);
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { language: language }).then(() => {
+          document.getElementById('generalSettingsMsg').textContent = 'Language saved!';
+          document.getElementById('generalSettingsMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('generalSettingsMsg').textContent = `Error saving language: ${error.message}`;
+          document.getElementById('generalSettingsMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+    };
+
+    // Function to save video quality preference
+    window.saveQuality = function() {
+      const quality = document.getElementById('qualitySelect').value;
+      alert(`Video quality set to: ${quality}`);
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { quality: quality }).then(() => {
+          document.getElementById('qualityMsg').textContent = 'Video quality saved!';
+          document.getElementById('qualityMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('qualityMsg').textContent = `Error saving quality: ${error.message}`;
+          document.getElementById('qualityMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+      // You might also want to dynamically change iframe sources or quality attributes here
+    };
+
+    // Function to save notification settings
+    window.saveNotifications = function() {
+      const emailNotifications = document.getElementById('emailNotifications').checked;
+      const pushNotifications = document.getElementById('pushNotifications').checked;
+      alert(`Email notifications: ${emailNotifications}, Push notifications: ${pushNotifications}`);
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { emailNotifications, pushNotifications }).then(() => {
+          document.getElementById('generalSettingsMsg').textContent = 'Notification settings saved!';
+          document.getElementById('generalSettingsMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('generalSettingsMsg').textContent = `Error saving notifications: ${error.message}`;
+          document.getElementById('generalSettingsMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+    };
+
+    // Function to save privacy settings
+    window.savePrivacySettings = function() {
+      const dataSharing = document.getElementById('dataSharing').checked;
+      const personalizedContent = document.getElementById('personalizedContent').checked;
+      alert(`Data sharing: ${dataSharing}, Personalized content: ${personalizedContent}`);
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { dataSharing, personalizedContent }).then(() => {
+          document.getElementById('generalSettingsMsg').textContent = 'Privacy settings saved!';
+          document.getElementById('generalSettingsMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('generalSettingsMsg').textContent = `Error saving privacy: ${error.message}`;
+          document.getElementById('generalSettingsMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+    };
+
+    // Function to set font size
+    window.setFontSize = function() {
+      const fontSize = document.getElementById('fontSize').value;
+      let sizeInPx;
+      if (fontSize === 'small') sizeInPx = '14px';
+      else if (fontSize === 'medium') sizeInPx = '16px';
+      else if (fontSize === 'large') sizeInPx = '18px';
+
+      document.body.style.setProperty('--main-font-size', sizeInPx);
+      localStorage.setItem('mainFontSize', sizeInPx);
+
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { fontSize: fontSize }).then(() => {
+          document.getElementById('generalSettingsMsg').textContent = 'Font size saved!';
+          document.getElementById('generalSettingsMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('generalSettingsMsg').textContent = `Error saving font size: ${error.message}`;
+          document.getElementById('generalSettingsMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+    };
+
+    // Apply saved font size on load
+    const savedFontSize = localStorage.getItem('mainFontSize');
+    if (savedFontSize) {
+      document.body.style.setProperty('--main-font-size', savedFontSize);
+      document.getElementById('fontSize').value = savedFontSize === '14px' ? 'small' : (savedFontSize === '16px' ? 'medium' : 'large');
+    }
+
+    // Function to set accent color
+    window.setAccentColor = function() {
+      const accentColor = document.getElementById('accentColor').value;
+      document.documentElement.style.setProperty('--accent-color', accentColor);
+      localStorage.setItem('accentColor', accentColor);
+
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { accentColor: accentColor }).then(() => {
+          document.getElementById('generalSettingsMsg').textContent = 'Accent color saved!';
+          document.getElementById('generalSettingsMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('generalSettingsMsg').textContent = `Error saving accent color: ${error.message}`;
+          document.getElementById('generalSettingsMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+    };
+
+    // Apply saved accent color on load
+    const savedAccentColor = localStorage.getItem('accentColor');
+    if (savedAccentColor) {
+      document.documentElement.style.setProperty('--accent-color', savedAccentColor);
+      document.getElementById('accentColor').value = savedAccentColor;
+    }
+
+    // Function to save accessibility settings
+    window.saveAccessibility = function() {
+      const closedCaptions = document.getElementById('closedCaptions').checked;
+      const captionSize = document.getElementById('captionSize').value;
+      alert(`Closed Captions: ${closedCaptions}, Caption size: ${captionSize}`);
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        updateDoc(userDocRef, { closedCaptions, captionSize }).then(() => {
+          document.getElementById('generalSettingsMsg').textContent = 'Accessibility settings saved!';
+          document.getElementById('generalSettingsMsg').style.color = 'green';
+        }).catch(error => {
+          document.getElementById('generalSettingsMsg').textContent = `Error saving accessibility: ${error.message}`;
+          document.getElementById('generalSettingsMsg').style.color = 'red';
+          console.error("Error updating document: ", error);
+        });
+      }
+    };
+
+    // Function to change password
+    window.changePassword = async function() {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const generalSettingsMsg = document.getElementById('generalSettingsMsg');
+
+        if (!currentUser) {
+            generalSettingsMsg.textContent = 'You must be signed in to change password.';
+            generalSettingsMsg.style.color = 'red';
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            generalSettingsMsg.textContent = 'New password must be at least 6 characters long.';
+            generalSettingsMsg.style.color = 'red';
+            return;
+        }
+
+        try {
+            // Reauthenticate user (important for security rules on password changes)
+            const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+            await reauthenticateWithCredential(currentUser, credential);
+            await updatePassword(currentUser, newPassword);
+            generalSettingsMsg.textContent = 'Password changed successfully!';
+            generalSettingsMsg.style.color = 'green';
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+        } catch (error) {
+            generalSettingsMsg.textContent = `Error changing password: ${error.message}`;
+            generalSettingsMsg.style.color = 'red';
+            console.error("Error changing password:", error);
+        }
+    };
+
+    // Function to delete account
+    window.deleteAccount = async function() {
+      if (!currentUser) {
+        alert("No user is signed in.");
+        return;
+      }
+
+      if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+        try {
+          // Delete user document from Firestore first
+          await deleteDoc(doc(db, "users", currentUser.uid));
+          // Then delete the user from Authentication
+          await deleteUser(currentUser);
+          alert("Your account has been deleted successfully.");
+          // UI will be updated by onAuthStateChanged listener, redirecting to home/sign-in
+        } catch (error) {
+          console.error("Error deleting account:", error);
+          alert(`Error deleting account: ${error.message}`);
+        }
+      }
+    };
+
+    // Function to clear watch history
+    window.clearHistory = async function() {
+      if (!currentUser) {
+        alert("Please sign in to clear history.");
+        return;
+      }
+      if (confirm("Are you sure you want to clear your watch history?")) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        try {
+          await updateDoc(userDocRef, { watchHistory: [] });
+          alert("Watch history cleared!");
+          loadUserDataToSettingsPage(currentUser.uid); // Refresh UI
+        } catch (error) {
+          console.error("Error clearing history:", error);
+          alert(`Error clearing history: ${error.message}`);
+        }
+      }
+    };
+
+    // Function to log watched videos
+    window.logWatched = async function(videoTitle) {
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        try {
+          await updateDoc(userDocRef, {
+            watchHistory: arrayUnion(videoTitle)
+          });
+          console.log(`Logged watched: ${videoTitle}`);
+        } catch (error) {
+          console.error("Error logging watched video:", error);
+        }
+      }
+    };
+
+    // Function to create a new playlist
+    window.createPlaylist = async function() {
+        if (!currentUser) {
+            alert("Please sign in to create a playlist.");
+            return;
+        }
+        const playlistNameInput = document.getElementById('playlistName');
+        const playlistName = playlistNameInput.value.trim();
+
+        if (playlistName === '') {
+            alert('Please enter a playlist name.');
+            return;
+        }
+
+        const userDocRef = doc(db, "users", currentUser.uid);
+        try {
+            await updateDoc(userDocRef, {
+                [`playlists.${playlistName}`]: [] // Create an empty array for the new playlist
+            });
+            alert(`Playlist "${playlistName}" created!`);
+            playlistNameInput.value = ''; // Clear input
+            loadUserDataToSettingsPage(currentUser.uid); // Refresh playlists in UI
+        } catch (error) {
+            console.error("Error creating playlist:", error);
+            alert(`Error creating playlist: ${error.message}`);
+        }
+    };
+
+    // Function to add a video to a playlist (simplified, needs UI for selection)
+    window.addToPlaylist = async function(videoTitle) {
+        if (!currentUser) {
+            alert("Please sign in to add to a playlist.");
+            return;
+        }
+        // This is a simplified example. In a real app, you'd have a UI to select which playlist.
+        // For demonstration, let's assume we add to a default playlist or the first one.
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            const playlists = userData.playlists || {};
+            const playlistNames = Object.keys(playlists);
+
+            if (playlistNames.length === 0) {
+                alert("You need to create a playlist first from settings.");
+                return;
+            }
+
+            // For simplicity, add to the first playlist found or prompt user
+            const targetPlaylistName = playlistNames[0]; // Or implement a dialog to choose
+
+            try {
+                await updateDoc(userDocRef, {
+                    [`playlists.${targetPlaylistName}`]: arrayUnion(videoTitle)
+                });
+                alert(`Added "${videoTitle}" to "${targetPlaylistName}" playlist.`);
+                loadUserDataToSettingsPage(currentUser.uid); // Refresh UI
+            } catch (error) {
+                console.error("Error adding to playlist:", error);
+                alert(`Error adding to playlist: ${error.message}`);
+            }
+        }
+    };
+
+    // Placeholder for managing playlists (e.g., deleting, renaming)
+    window.managePlaylists = function() {
+        alert("Manage Playlists feature coming soon! You can view them in settings for now.");
+        // Implement detailed UI for managing playlists here
+    };
+
+    // Function to add to favorites (similar to playlist logic)
+    window.addToFavorites = async function(videoTitle) {
+        if (!currentUser) {
+            alert("Please sign in to favorite videos.");
+            return;
+        }
+        const userDocRef = doc(db, "users", currentUser.uid);
+        try {
+            await updateDoc(userDocRef, {
+                favorites: arrayUnion(videoTitle) // Assuming a 'favorites' array in user document
+            });
+            alert(`"${videoTitle}" added to favorites!`);
+        } catch (error) {
+            console.error("Error adding to favorites:", error);
+            alert(`Error adding to favorites: ${error.message}`);
+        }
+    };
+
+    // Function to share to WhatsApp
+    window.shareToWhatsApp = function(videoTitle, videoUrl) {
+      const message = `Check out this video on HOLY SCREEN: "${videoTitle}" - ${videoUrl}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    };
+
+    // Function for fullscreen toggle
+    window.toggleFullScreen = function(videoCard) {
+      const iframe = videoCard.querySelector('iframe');
+      if (iframe) {
+        if (iframe.requestFullscreen) {
+          iframe.requestFullscreen();
+        } else if (iframe.mozRequestFullScreen) { /* Firefox */
+          iframe.mozRequestFullScreen();
+        } else if (iframe.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+          iframe.webkitRequestFullscreen();
+        } else if (iframe.msRequestFullscreen) { /* IE/Edge */
+          iframe.msRequestFullscreen();
+        }
+      }
+    };
+
+    // Toggle action menu for video cards
+    window.toggleMenu = function(button) {
+      const actionList = button.nextElementSibling;
+      // Close all other open menus
+      document.querySelectorAll('.action-list.show').forEach(list => {
+        if (list !== actionList) {
+          list.classList.remove('show');
+        }
+      });
+      actionList.classList.toggle('show');
+    };
+
+    // Close action menu when clicking outside
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-list.show').forEach(list => {
+          list.classList.remove('show');
+        });
+      }
+    });
+
+    // Handle profile photo upload
+    window.saveProfilePhoto = async function(input) {
+      if (!currentUser) {
+        alert("Please sign in to upload a profile photo.");
+        return;
+      }
+      if (input.files.length > 0) {
+        const file = input.files[0];
+        const storageRef = ref(storage, `profile_photos/${currentUser.uid}/${file.name}`);
+        try {
+          await uploadBytes(storageRef, file);
+          const photoURL = await getDownloadURL(storageRef);
+          await updateProfile(currentUser, { photoURL: photoURL }); // Update Firebase Auth profile
+          await updateDoc(doc(db, "users", currentUser.uid), { photoURL: photoURL }); // Update Firestore
+          document.getElementById('userPhoto').src = photoURL;
+          alert('Profile photo updated successfully!');
+        } catch (error) {
+          console.error("Error uploading profile photo:", error);
+          alert(`Error uploading photo: ${error.message}`);
+        }
+      }
+    };
+
+    // Function to edit profile name
+    window.editProfileName = async function() {
+        if (!currentUser) {
+            alert("You must be signed in to edit your profile name.");
+            return;
+        }
+
+        const newName = prompt("Enter your new display name:");
+        if (newName && newName.trim() !== "") {
+            try {
+                // Update Firebase Authentication profile
+                await updateProfile(currentUser, { displayName: newName.trim() });
+
+                // Update Firestore user document
+                const userDocRef = doc(db, "users", currentUser.uid);
+                await updateDoc(userDocRef, { displayName: newName.trim() });
+
+                document.getElementById('profileNameDisplay').textContent = newName.trim();
+                alert('Profile name updated successfully!');
+            } catch (error) {
+                console.error("Error updating profile name:", error);
+                alert(`Error updating profile name: ${error.message}`);
+            }
+        }
+    };
+
+
+    // Break Reminder
+    let breakTimeout;
+    window.startBreakReminder = function() {
+        const breakMinutes = parseInt(document.getElementById('breakMinutes').value);
+        if (isNaN(breakMinutes) || breakMinutes <= 0) {
+            alert('Please enter a valid number of minutes for the break reminder.');
+            return;
+        }
+
+        if (breakTimeout) {
+            clearTimeout(breakTimeout);
+        }
+
+        const durationMs = breakMinutes * 60 * 1000;
+        alert(`Break reminder set for ${breakMinutes} minutes.`);
+        breakTimeout = setTimeout(() => {
+            alert("HOLY SCREEN: Time for a break! Stretch your legs or rest your eyes.");
+        }, durationMs);
+    };
+
+    // Bedtime Reminder
+    let bedtimeTimeout;
+    window.setBedtimeReminder = function() {
+        const bedtimeInput = document.getElementById('bedtimeInput').value;
+        const reminderMessage = document.getElementById('reminderMessage');
+
+        if (!bedtimeInput) {
+            reminderMessage.textContent = 'Please select a bedtime.';
+            reminderMessage.style.color = 'red';
+            return;
+        }
+
+        if (bedtimeTimeout) {
+            clearTimeout(bedtimeTimeout);
+        }
+
+        const [hours, minutes] = bedtimeInput.split(':').map(Number);
+        const now = new Date();
+        const bedtime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0); // Use getDate() for day of month
+
+        if (bedtime < now) { // If bedtime is today but already passed, set for tomorrow
+            bedtime.setDate(bedtime.getDate() + 1);
+        }
+
+        const timeToBed = bedtime.getTime() - now.getTime();
+
+        reminderMessage.textContent = `Bedtime reminder set for ${bedtimeInput}.`;
+        reminderMessage.style.color = 'green';
+
+        bedtimeTimeout = setTimeout(() => {
+            alert("HOLY SCREEN: It's your bedtime! Time to wind down.");
+            // Optionally, reset for the next day immediately or let user re-set
+            // setBedtimeReminder();
+        }, timeToBed);
+    };
+
+    // Clear Cache function
+    window.clearCache = function() {
+        if (confirm("Are you sure you want to clear the local cache? This will reset some settings and history.")) {
+            localStorage.clear();
+            alert("Local cache cleared!");
+            // Optionally reload page to reflect changes immediately
+            location.reload();
+        }
+    };
+
+    // Reset All Settings function
+    window.resetAllSettings = async function() {
+        if (!currentUser) {
+            alert("Please sign in to reset your settings.");
+            return;
+        }
+        if (confirm("Are you sure you want to reset all your personalized settings? This action cannot be undone for cloud settings.")) {
+            try {
+                // Reset Firestore user document to initial state (or delete relevant fields)
+                const userDocRef = doc(db, "users", currentUser.uid);
+                await setDoc(userDocRef, {
+                    email: currentUser.email, // Keep email
+                    createdAt: new Date(),
+                    watchHistory: [],
+                    playlists: {},
+                    // Reset other fields to default or remove them
+                    language: null,
+                    quality: 'default',
+                    emailNotifications: false,
+                    pushNotifications: false,
+                    dataSharing: false,
+                    personalizedContent: false,
+                    fontSize: 'medium',
+                    accentColor: '#ff3300',
+                    closedCaptions: false,
+                    captionSize: 'medium'
+                });
+
+                // Clear local storage settings as well
+                localStorage.clear();
+                
+                alert("All settings reset successfully!");
+                // Refresh UI
+                location.reload(); 
+            } catch (error) {
+                console.error("Error resetting settings:", error);
+                alert(`Error resetting settings: ${error.message}`);
+            }
+        }
+    };
+
+
+    // Call initPage initially when the script loads to set up the page state
+    // onAuthStateChanged will then...
+  </script>
+</body>
+</html>
